@@ -1,0 +1,108 @@
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
+import java.math.BigInteger;
+import java.security.SecureRandom;
+
+public class MyClass {
+    public static void main(String args[]) throws Exception {
+        
+        String plainText = "Hello World";
+
+        SecretKey secKey = getSecretEncryptionKey();
+        String keyHexForm = bytesToHex(secKey.getEncoded());
+        System.out.println("AES Key (Hex Form):"+keyHexForm);
+        
+        
+
+        BigInteger Keyvalue = new BigInteger(keyHexForm, 16);
+        System.out.println("Original AES Key (BigInt Form):"+Keyvalue);
+        
+        //d is private key, so should be kept safe
+        BigInteger d = new BigInteger(randomString(40));
+        
+        //p and q are components that make public key, so can be shared
+        BigInteger p = new BigInteger(randomString(40));
+        BigInteger q = d.multiply(p);
+        
+        //k is randomly generated each time for a new message, doesn't need to be sent
+        BigInteger k = new BigInteger(randomString(40));
+           
+        //c1 and c2 are the ciphertext of AES Key 
+        BigInteger c1 = k.multiply(p);
+        BigInteger c2 = Keyvalue.add(k.multiply(q));
+        
+        // c1 and c2 are sent over network
+        System.out.println("c1 (BigInt Form):"+c1);
+        System.out.println("c2 Key (BigInt Form):"+c2);
+        
+        
+        
+        
+       //At receiver's end
+           
+        BigInteger decKeyvalue = c2.subtract(d.multiply(c1));
+        System.out.println("Original AES Key Decrypted (BigInt Form):"+decKeyvalue);
+        
+        String hexNewValue = decKeyvalue.toString(16);
+        SecretKey RecsecKey = getKeytoUnlock(toByteArray(hexNewValue));
+        System.out.println("AES Key (Hex Form) at receiver:"+bytesToHex(RecsecKey.getEncoded()));
+
+        
+        
+        
+        // byte[] cipherText = encryptText(plainText, secKey);
+        // String decryptedText = decryptText(cipherText, secKey);
+        // System.out.println("Original Text:" + plainText);
+        // System.out.println("Encrypted Text (Hex Form):"+bytesToHex(cipherText));
+        // System.out.println("Descrypted Text:"+decryptedText);
+    }
+    public static SecretKey getSecretEncryptionKey() throws Exception{
+        KeyGenerator generator = KeyGenerator.getInstance("AES");
+        generator.init(128); // The AES key size in number of bits
+        SecretKey secKey = generator.generateKey();
+        return secKey;
+    }
+    
+    private static String  bytesToHex(byte[] hash) {
+        return DatatypeConverter.printHexBinary(hash);
+    }
+    
+    public static byte[] encryptText(String plainText,SecretKey secKey) throws Exception{
+        // AES defaults to AES/ECB/PKCS5Padding in Java 7
+        Cipher aesCipher = Cipher.getInstance("AES");
+        aesCipher.init(Cipher.ENCRYPT_MODE, secKey);
+        byte[] byteCipherText = aesCipher.doFinal(plainText.getBytes());
+        return byteCipherText;
+    }
+    
+    public static String decryptText(byte[] byteCipherText, SecretKey secKey) throws Exception {
+        // AES defaults to AES/ECB/PKCS5Padding in Java 7
+        Cipher aesCipher = Cipher.getInstance("AES");
+        aesCipher.init(Cipher.DECRYPT_MODE, secKey);
+        byte[] bytePlainText = aesCipher.doFinal(byteCipherText);
+        return new String(bytePlainText);
+    }
+    
+    private static SecretKey getKeytoUnlock(byte[] m) throws Exception {
+		return new SecretKeySpec(m, 0, 16, "AES");
+	}
+	
+	public static byte[] toByteArray(String s) {
+    return DatatypeConverter.parseHexBinary(s);
+    }
+    
+    public static String randomString(int len) throws Exception{
+		String AB = "0123456789";
+		SecureRandom rnd = new SecureRandom();
+		StringBuilder sb = new StringBuilder( len );
+		for( int i = 0; i < len; i++ )sb.append( AB.charAt( rnd.nextInt(AB.length()) ) );
+		return sb.toString();
+	}
+
+
+
+
+}
