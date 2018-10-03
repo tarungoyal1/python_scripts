@@ -19,12 +19,12 @@ def isPrime(n):
 		return False
 	i=5
 	w=2
-    while i*i<=n:
-        if n%i==0:
-            return False
-        i +=w
-        w=6-w
-    return True
+	while i*i<=n:
+		if n%i==0:
+		    return False
+		i +=w
+		w=6-w
+	return True
 
 n=int(input("Enter n:"))
 count=1
